@@ -1,6 +1,6 @@
 // Rules.tsx
 import React from 'react';
-import './Rules.css'; // опционально, если хотите вынести стили
+import './rules.css'; // опционально, если хотите вынести стили
 
 const Rules: React.FC = () => {
   return (
