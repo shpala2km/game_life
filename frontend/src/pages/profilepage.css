@@ -1,0 +1,144 @@
+.profile-container {
+  min-height: 100vh;
+  background: #0a1428;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.profile-card {
+  background: #13213d;
+  border-radius: 16px;
+  padding: 40px 50px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: #e0e0e0;
+}
+
+.profile-card h1 {
+  margin: 0 0 8px 0;
+  color: #05a931;
+  text-align: center;
+}
+
+.profile-subtitle {
+  text-align: center;
+  color: #8899aa;
+  margin-bottom: 30px;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 6px;
+  color: #a0b0d0;
+  font-weight: 600;
+}
+
+.form-group input {
+  padding: 12px 14px;
+  background: #1e2a44;
+  border: 1px solid #334455;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 15px;
+}
+
+.input-disabled {
+  background: #25334f;
+  cursor: not-allowed;
+}
+
+.divider {
+  border: none;
+  height: 1px;
+  background: #334455;
+  margin: 10px 0 20px 0;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.message.success {
+  background: #1e3a2f;
+  color: #4ade80;
+  border: 1px solid #4ade80;
+}
+
+.message.error {
+  background: #3a1e1e;
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+
+.save-btn {
+  margin-top: 10px;
+  padding: 14px;
+  background: #05a931;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn:hover {
+  background: #049028;
+  transform: translateY(-2px);
+}
+
+.save-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.profile-actions {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logout-btn-full {
+  padding: 12px;
+  background: #e53935;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logout-btn-full:hover {
+  background: #c62828;
+}
+
+.back-btn {
+  padding: 12px;
+  background: #445577;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: #556688;
+}
