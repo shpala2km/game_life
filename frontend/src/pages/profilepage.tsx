@@ -1,30 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Navbar from '@/modules/navbar';
 import '@/pages/profilepage.css';
-import Navbar from '@/modules/Navbar';
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
 
-  const [currentUser, setCurrentUser] = useState<string | null>(
-    localStorage.getItem('username')
-  );
-
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
+    username: localStorage.getItem('username') || '',
+    email: localStorage.getItem('user_email') || '',
     newPassword: '',
     confirmNewPassword: '',
   });
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
 
-  // Axios с токеном
   const api = axios.create({ baseURL: API_URL });
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem('access_token');
@@ -32,21 +26,11 @@ const ProfilePage: React.FC = () => {
     return config;
   });
 
-  // Загрузка данных пользователя при открытии страницы
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!localStorage.getItem('access_token')) {
       navigate('/login');
-      return;
     }
-
-    const savedEmail = localStorage.getItem('user_email'); // будем сохранять при регистрации
-    setFormData({
-      username: currentUser || '',
-      email: savedEmail || '',
-      newPassword: '',
-      confirmNewPassword: '',
-    });
-  }, [isLoggedIn, currentUser, navigate]);
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -54,69 +38,50 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setMessage(null);
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
 
-  try {
-    const updateData: any = {};
+    try {
+      const updateData: any = {};
 
-    if (formData.email && formData.email !== localStorage.getItem('user_email')) {
-      updateData.email = formData.email;
-    }
+      if (formData.email) updateData.email = formData.email;
+      if (formData.newPassword) updateData.new_password = formData.newPassword;
 
-    if (formData.newPassword) {
-      if (formData.newPassword !== formData.confirmNewPassword) {
-        setMessage({ type: 'error', text: 'Новые пароли не совпадают' });
+      if (Object.keys(updateData).length === 0) {
+        setMessage({ type: 'error', text: 'Ничего не изменено' });
         setLoading(false);
         return;
       }
-      if (formData.newPassword.length < 6) {
-        setMessage({ type: 'error', text: 'Новый пароль должен содержать минимум 6 символов' });
-        setLoading(false);
-        return;
-      }
-      updateData.new_password = formData.newPassword;
-    }
 
-    if (Object.keys(updateData).length === 0) {
-      setMessage({ type: 'error', text: 'Ничего не изменено' });
+      await api.put('/auth/profile/update/', updateData);
+
+      if (formData.email) {
+        localStorage.setItem('user_email', formData.email);
+      }
+
+      setMessage({ type: 'success', text: 'Профиль успешно обновлён!' });
+
+      setFormData(prev => ({
+        ...prev,
+        newPassword: '',
+        confirmNewPassword: '',
+      }));
+
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.detail || 'Ошибка при обновлении профиля'
+      });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const response = await api.put('/auth/profile/update/', updateData);
-
-    if (formData.email) {
-      localStorage.setItem('user_email', formData.email);
-    }
-
-    setMessage({ type: 'success', text: 'Профиль успешно обновлён!' });
-
-    setFormData(prev => ({
-      ...prev,
-      newPassword: '',
-      confirmNewPassword: '',
-    }));
-
-  } catch (err: any) {
-    setMessage({
-      type: 'error',
-      text: err.response?.data?.error || err.response?.data?.detail || 'Ошибка при обновлении'
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleLogout = () => {
-    localStorage.clear(); // очищаем всё
-    navigate('/login');
   };
 
-  if (!isLoggedIn) {
-    return <div>Перенаправление...</div>;
-  }
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
   return (
     <div className="app">
@@ -129,12 +94,7 @@ const ProfilePage: React.FC = () => {
           <form onSubmit={handleUpdateProfile} className="profile-form">
             <div className="form-group">
               <label>Имя пользователя</label>
-              <input
-                type="text"
-                value={formData.username}
-                disabled
-                className="input-disabled"
-              />
+              <input type="text" value={formData.username} disabled className="input-disabled" />
             </div>
 
             <div className="form-group">
@@ -159,7 +119,7 @@ const ProfilePage: React.FC = () => {
                 name="newPassword"
                 value={formData.newPassword}
                 onChange={handleChange}
-                placeholder="Введите новый пароль"
+                placeholder="Новый пароль"
               />
             </div>
 
@@ -170,15 +130,11 @@ const ProfilePage: React.FC = () => {
                 name="confirmNewPassword"
                 value={formData.confirmNewPassword}
                 onChange={handleChange}
-                placeholder="Повторите новый пароль"
+                placeholder="Повторите пароль"
               />
             </div>
 
-            {message && (
-              <div className={`message ${message.type}`}>
-                {message.text}
-              </div>
-            )}
+            {message && <div className={`message ${message.type}`}>{message.text}</div>}
 
             <button type="submit" className="save-btn" disabled={loading}>
               {loading ? 'Сохранение...' : 'Сохранить изменения'}

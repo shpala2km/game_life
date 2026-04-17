@@ -25,6 +25,10 @@ const Navbar: React.FC = () => {
         </div>
 
         <div className="navbar-right">
+          <Link to="/" className="nav-btn home-btn">
+            🏠 Главная
+          </Link>
+
           {isLoggedIn ? (
             <>
               <Link to="/profile" className="nav-btn profile-btn">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '@/pages/loginpage.css';
-import Navbar from '@/modules/Navbar';
+import Navbar from '@/modules/navbar';
 
 
 const API_URL = 'http://127.0.0.1:8000/api';
