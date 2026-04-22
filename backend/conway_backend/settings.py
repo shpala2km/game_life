@@ -10,8 +10,13 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
 
-# ИСПРАВЛЕНО: убраны протоколы http:// и пути
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '81.26.181.171'])
+# ИСПРАВЛЕНО: добавляем все необходимые хосты
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '81.26.181.171',
+    'backend',  # имя контейнера для внутренних запросов
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -64,7 +69,7 @@ DATABASES = {
         'NAME': env('DB_NAME'),
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
+        'HOST': 'db',  # ИСПРАВЛЕНО: имя сервиса из docker-compose
         'PORT': env('DB_PORT'),
     }
 }
@@ -84,17 +89,23 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-# ИСПРАВЛЕНО: в CORS нужно указывать полные URL с протоколом
-# CORS_ALLOWED_ORIGINS = [
-#     'http://localhost:8000',
-#     'http://127.0.0.1:8000',
-#     'http://81.26.181.171',
-#     'http://81.26.181.171:8000',  # если фронт на том же порту
-# ]
-# Если нужно разрешить любые источники для тестирования (не для продакшена):
-CORS_ALLOW_ALL_ORIGINS = True
+# ИСПРАВЛЕНО: настройки CORS
+CORS_ALLOWED_ORIGINS = [
+    'http://81.26.181.171',
+    'http://localhost:80',
+    'http://localhost',
+    'http://127.0.0.1',
+]
 
+CORS_ALLOW_PRIVATE_NETWORK = True
 CORS_ALLOW_CREDENTIALS = True
+
+# Дополнительно для безопасности
+CSRF_TRUSTED_ORIGINS = [
+    'http://81.26.181.171',
+    'http://localhost',
+    'http://127.0.0.1',
+]
 
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
@@ -102,4 +113,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
