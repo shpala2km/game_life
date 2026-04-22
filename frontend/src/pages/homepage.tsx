@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 import '@/pages/homepage.css';
 import { GameEngine } from '@/core/GameEngine';
@@ -9,15 +7,11 @@ import { getCellClass } from '@/modules/cellAppearance';
 import Rules from '@/modules/rules';
 import Navbar from '@/modules/navbar';
 
-const API_URL = 'http://127.0.0.1:8000/api';
+import api from '@/config/api';
 
 function HomePage() {
-  // const navigate = useNavigate();
 
-  // const [currentUser, setCurrentUser] = useState<string | null>(
-  //   localStorage.getItem('username')
-  // );
-  const [isLoggedIn, /*setIsLoggedIn*/] = useState(!!localStorage.getItem('access_token'));
+  const [isLoggedIn] = useState(!!localStorage.getItem('access_token'));
 
   const sizes = [16, 8, 25, 36];
   const speeds = [1000, 200, 100, 50];
@@ -42,13 +36,6 @@ function HomePage() {
   const engineRef = useRef<GameEngine | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
-
-  const api = axios.create({ baseURL: API_URL });
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
 
   // Инициализация движка
   useEffect(() => {
@@ -102,16 +89,6 @@ function HomePage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [isRunning, speedIndex]);
-
-  // ====================== АВТОРИЗАЦИЯ ======================
-  // const handleLogout = () => {
-  //   localStorage.removeItem('access_token');
-  //   localStorage.removeItem('refresh_token');
-  //   localStorage.removeItem('username');
-  //   setCurrentUser(null);
-  //   setIsLoggedIn(false);
-  //   navigate('/login');
-  // };
 
   // ====================== СОХРАНЕНИЕ ======================
   const handleSaveToServer = async () => {

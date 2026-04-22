@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '@/config/api'; // Импортируем наш api
 import Navbar from '@/modules/navbar';
 import '@/pages/profilepage.css';
-
-const API_URL = 'http://127.0.0.1:8000/api';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,13 +16,6 @@ const ProfilePage: React.FC = () => {
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const api = axios.create({ baseURL: API_URL });
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
 
   useEffect(() => {
     if (!localStorage.getItem('access_token')) {
@@ -45,8 +36,22 @@ const ProfilePage: React.FC = () => {
     try {
       const updateData: any = {};
 
-      if (formData.email) updateData.email = formData.email;
-      if (formData.newPassword) updateData.new_password = formData.newPassword;
+      if (formData.email && formData.email !== localStorage.getItem('user_email')) {
+        updateData.email = formData.email;
+      }
+      if (formData.newPassword) {
+        if (formData.newPassword !== formData.confirmNewPassword) {
+          setMessage({ type: 'error', text: 'Пароли не совпадают' });
+          setLoading(false);
+          return;
+        }
+        if (formData.newPassword.length < 6) {
+          setMessage({ type: 'error', text: 'Пароль должен содержать минимум 6 символов' });
+          setLoading(false);
+          return;
+        }
+        updateData.new_password = formData.newPassword;
+      }
 
       if (Object.keys(updateData).length === 0) {
         setMessage({ type: 'error', text: 'Ничего не изменено' });
@@ -54,7 +59,7 @@ const ProfilePage: React.FC = () => {
         return;
       }
 
-      await api.put('/auth/profile/update/', updateData);
+      await api.put('auth/profile/update/', updateData);
 
       if (formData.email) {
         localStorage.setItem('user_email', formData.email);

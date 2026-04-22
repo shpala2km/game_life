@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '@/config/api'; // Импортируем наш api
 import '@/pages/loginpage.css';
 import Navbar from '@/modules/navbar';
-
-
-const API_URL = 'http://127.0.0.1:8000/api';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -24,11 +21,15 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/auth/login/`, formData);
+      // Убираем ${API_URL}, используем относительный путь
+      const response = await api.post('auth/login/', formData);
       
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       localStorage.setItem('username', formData.username);
+      if (response.data.email) {
+        localStorage.setItem('user_email', response.data.email);
+      }
 
       navigate('/');
     } catch (err: any) {
