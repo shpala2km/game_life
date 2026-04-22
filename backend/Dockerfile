@@ -12,7 +12,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Опционально: скрипт для ожидания БД + миграций
-# CMD ["sh", "-c", "python manage.py wait_for_db && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+# Важно: слушаем 0.0.0.0, а не 127.0.0.1
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-
