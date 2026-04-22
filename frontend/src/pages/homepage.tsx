@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import '@/pages/homepage.css';
@@ -12,12 +12,12 @@ import Navbar from '@/modules/navbar';
 const API_URL = 'http://127.0.0.1:8000/api';
 
 function HomePage() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const [currentUser, setCurrentUser] = useState<string | null>(
-    localStorage.getItem('username')
-  );
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
+  // const [currentUser, setCurrentUser] = useState<string | null>(
+  //   localStorage.getItem('username')
+  // );
+  const [isLoggedIn, /*setIsLoggedIn*/] = useState(!!localStorage.getItem('access_token'));
 
   const sizes = [16, 8, 25, 36];
   const speeds = [1000, 200, 100, 50];
@@ -104,14 +104,14 @@ function HomePage() {
   }, [isRunning, speedIndex]);
 
   // ====================== АВТОРИЗАЦИЯ ======================
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('username');
-    setCurrentUser(null);
-    setIsLoggedIn(false);
-    navigate('/login');
-  };
+  // const handleLogout = () => {
+  //   localStorage.removeItem('access_token');
+  //   localStorage.removeItem('refresh_token');
+  //   localStorage.removeItem('username');
+  //   setCurrentUser(null);
+  //   setIsLoggedIn(false);
+  //   navigate('/login');
+  // };
 
   // ====================== СОХРАНЕНИЕ ======================
   const handleSaveToServer = async () => {
