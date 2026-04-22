@@ -71,7 +71,7 @@ html, body, #root {
 .controls-panel {
   flex: 1;
   min-width: 360px;
-  max-height: 650px;
+  max-height: 750px;
   background: #13213d;
   border-radius: 12px;
   padding: 25px;

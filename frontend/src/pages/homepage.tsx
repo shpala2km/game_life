@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import '@/pages/homepage.css';
@@ -11,7 +12,12 @@ import Navbar from '@/modules/navbar';
 const API_URL = 'http://127.0.0.1:8000/api';
 
 function HomePage() {
-  const [isLoggedIn] = useState(!!localStorage.getItem('access_token'));
+  const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState<string | null>(
+    localStorage.getItem('username')
+  );
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
 
   const sizes = [16, 8, 25, 36];
   const speeds = [1000, 200, 100, 50];
@@ -19,6 +25,10 @@ function HomePage() {
 
   const [size, setSize] = useState(sizes[0]);
   const [grid, setGrid] = useState<number[][]>([]);
+
+  const [neinghSurvive, setNeinghSurvive] = useState('2/3');
+  const [neinghBirth, setNeinghBirth] = useState('3');
+
   const [generation, setGeneration] = useState(0);
   const [population, setPopulation] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -33,7 +43,6 @@ function HomePage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
 
-  // Axios с токеном
   const api = axios.create({ baseURL: API_URL });
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem('access_token');
@@ -43,10 +52,13 @@ function HomePage() {
 
   // Инициализация движка
   useEffect(() => {
-    const engine = new GameEngine(size, { birth: [3], survival: [2, 3] });
+    const engine = new GameEngine(size, {
+      birth: [Number(neinghBirth)],
+      survival: neinghSurvive.split('/').map(Number),
+    });
     engineRef.current = engine;
     setGrid(engine.getGrid());
-  }, [size]);
+  }, [size, neinghSurvive, neinghBirth]);
 
   // Обновление популяции
   useEffect(() => {
@@ -54,7 +66,7 @@ function HomePage() {
     setPopulation(pop);
   }, [grid]);
 
-  // Загрузка сохранений пользователя
+  // Загрузка списка сохранений
   const loadUserSaves = async () => {
     if (!isLoggedIn) return;
     try {
@@ -69,11 +81,12 @@ function HomePage() {
     if (isLoggedIn) loadUserSaves();
   }, [isLoggedIn]);
 
-  // Симуляция
+  // ====================== СИМУЛЯЦИЯ ======================
   useEffect(() => {
     if (!engineRef.current) return;
 
     if (isRunning) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(() => {
         const result = engineRef.current!.step();
         setGrid(result.newGrid);
@@ -90,9 +103,20 @@ function HomePage() {
     };
   }, [isRunning, speedIndex]);
 
+  // ====================== АВТОРИЗАЦИЯ ======================
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('username');
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
+
   // ====================== СОХРАНЕНИЕ ======================
   const handleSaveToServer = async () => {
-    if (!engineRef.current || !saveName.trim()) {
+    if (!engineRef.current) return;
+    if (!saveName.trim()) {
       alert('Введите название сохранения');
       return;
     }
@@ -127,20 +151,23 @@ function HomePage() {
   // ====================== ЗАГРУЗКА И УДАЛЕНИЕ ======================
   const handleLoadGame = (save: any) => {
     if (!engineRef.current) return;
-
     engineRef.current.loadFromJSON(save);
+
     setSize(engineRef.current.getSize());
     setGrid(engineRef.current.getGrid());
     setGeneration(engineRef.current.getGeneration());
     setIsRunning(false);
-    setSelectedSaveId(save.id);
 
+    const loadedRules = engineRef.current.getRules();
+    setNeinghSurvive(loadedRules.survival.join('/'));
+    setNeinghBirth(loadedRules.birth.join(','));
+
+    setSelectedSaveId(save.id);
     alert(`✅ Загружена: ${save.name}`);
   };
 
   const handleDeleteSave = async (id: number, name: string) => {
     if (!window.confirm(`Удалить сохранение "${name}"?`)) return;
-
     try {
       await api.delete(`/games/${id}/`);
       alert('Сохранение удалено');
@@ -151,7 +178,7 @@ function HomePage() {
     }
   };
 
-  // ====================== Основные действия ======================
+  // ====================== ОБРАБОТЧИКИ ======================
   const handleStart = () => setIsRunning(true);
   const handleStop = () => setIsRunning(false);
 
@@ -189,6 +216,23 @@ function HomePage() {
     setSpeedIndex(parseInt(e.target.value, 10));
   };
 
+  const handleApplyCustomRules = () => {
+    const survStr = (document.getElementById('custom-survival') as HTMLInputElement)?.value || '';
+    const birthStr = (document.getElementById('custom-birth') as HTMLInputElement)?.value || '';
+
+    const survival = survStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    const birth = birthStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+    if (survival.length > 0 && birth.length > 0) {
+      engineRef.current?.setRules({ birth, survival });
+      setNeinghSurvive(survival.join('/'));
+      setNeinghBirth(birth.join(','));
+      alert('Правила успешно применены!');
+    } else {
+      alert('Введите корректные значения для правил');
+    }
+  };
+
   const applyShape = (template: string[]) => {
     engineRef.current?.applyShape(template);
     setGrid(engineRef.current!.getGrid());
@@ -196,7 +240,6 @@ function HomePage() {
     setIsRunning(false);
   };
 
-  // Рисование мышью
   const handleMouseDown = (i: number, j: number) => {
     setIsInverting(true);
     engineRef.current?.toggleCell(i, j);
@@ -204,9 +247,9 @@ function HomePage() {
   };
 
   const handleMouseEnter = (i: number, j: number) => {
-    if (isInverting && engineRef.current) {
-      engineRef.current.toggleCell(i, j);
-      setGrid(engineRef.current.getGrid());
+    if (isInverting) {
+      engineRef.current?.toggleCell(i, j);
+      setGrid(engineRef.current!.getGrid());
     }
   };
 
@@ -254,8 +297,8 @@ function HomePage() {
           <div className="button-group">
             <button onClick={handleStart} className="start-btn" disabled={isStartDisabled}>Старт</button>
             <button onClick={handleStop} className="stop-btn" disabled={!isRunning}>Стоп</button>
-            <button onClick={handleRandom}>Случайное заполнение</button>
-            <button onClick={handleNext}>Следующий шаг</button>
+            <button onClick={handleRandom}>Случ. заполнение</button>
+            <button onClick={handleNext}>След. шаг</button>
             <button onClick={handleClear}>Очистить</button>
           </div>
 
@@ -316,21 +359,7 @@ function HomePage() {
             </div>
           )}
 
-          {/* Шаблоны */}
-          <div className="button-group">
-            <label style={{ color: '#a0b0d0', fontWeight: '600' }}>Шаблоны:</label>
-            {Object.keys(SHAPE_TEMPLATES).map((key) => (
-              <button
-                key={key}
-                onClick={() => applyShape(SHAPE_TEMPLATES[key as keyof typeof SHAPE_TEMPLATES])}
-                style={{ fontSize: '13px', padding: '8px 12px' }}
-              >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Настройки */}
+          {/* Кастомные правила — возвращены */}
           <div className="select-group">
             <div>
               <label>Размер поля</label>
@@ -347,6 +376,72 @@ function HomePage() {
                 ))}
               </select>
             </div>
+
+            {/* Поля для изменения правил */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ color: '#a0b0d0', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+                Свои правила (выживание / рождение)
+              </label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  id="custom-survival"
+                  placeholder="2,3"
+                  defaultValue={neinghSurvive}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    background: '#112233',
+                    color: '#fff',
+                    border: '1px solid #334455',
+                    borderRadius: '4px'
+                  }}
+                />
+                <input
+                  id="custom-birth"
+                  placeholder="3"
+                  defaultValue={neinghBirth}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    background: '#112233',
+                    color: '#fff',
+                    border: '1px solid #334455',
+                    borderRadius: '4px'
+                  }}
+                />
+                <button
+                  onClick={handleApplyCustomRules}
+                  style={{
+                    padding: '8px 14px',
+                    background: '#05a931',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  Применить
+                </button>
+              </div>
+              <small style={{ color: '#8899aa' }}>
+                Выживание (через запятую), Рождение
+              </small>
+            </div>
+          </div>
+
+          {/* Шаблоны */}
+          <div className="button-group">
+            <label style={{ color: '#a0b0d0', fontWeight: '600' }}>Шаблоны:</label>
+            {Object.keys(SHAPE_TEMPLATES).map((key) => (
+              <button
+                key={key}
+                onClick={() => applyShape(SHAPE_TEMPLATES[key as keyof typeof SHAPE_TEMPLATES])}
+                style={{ fontSize: '13px', padding: '8px 12px' }}
+              >
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </button>
+            ))}
           </div>
 
           <div className="info">
