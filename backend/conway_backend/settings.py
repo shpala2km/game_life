@@ -85,14 +85,14 @@ SIMPLE_JWT = {
 }
 
 # ИСПРАВЛЕНО: в CORS нужно указывать полные URL с протоколом
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://81.26.181.171',
-    'http://81.26.181.171:8000',  # если фронт на том же порту
-]
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost:8000',
+#     'http://127.0.0.1:8000',
+#     'http://81.26.181.171',
+#     'http://81.26.181.171:8000',  # если фронт на том же порту
+# ]
 # Если нужно разрешить любые источники для тестирования (не для продакшена):
-# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
