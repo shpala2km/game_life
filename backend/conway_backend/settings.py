@@ -10,9 +10,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'http://81.26.181.171/', '81.26.181.171', 
-                                                   'http://127.0.0.1:8000/api/auth/login/', 
-                                                   'http://127.0.0.1:8000/api/auth/register/'])
+# ИСПРАВЛЕНО: убраны протоколы http:// и пути
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '81.26.181.171'])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -59,7 +58,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'conway_backend.wsgi.application'
 
-# ====================== PostgreSQL ======================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -71,7 +69,6 @@ DATABASES = {
     }
 }
 
-# ====================== REST Framework + JWT ======================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -87,8 +84,16 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-# ====================== CORS ======================
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS')
+# ИСПРАВЛЕНО: в CORS нужно указывать полные URL с протоколом
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://81.26.181.171',
+    'http://81.26.181.171:8000',  # если фронт на том же порту
+]
+# Если нужно разрешить любые источники для тестирования (не для продакшена):
+# CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
 
 LANGUAGE_CODE = 'ru-ru'
