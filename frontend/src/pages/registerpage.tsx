@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '@/config/api'; // Импортируем наш api
+import axios from 'axios';
 import '@/pages/registerpage.css';
 import Navbar from '@/modules/navbar';
+
+
+const API_URL = 'http://127.0.0.1:8000/api';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -40,8 +43,7 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      // Убираем ${API_URL}, используем относительный путь
-      await api.post('auth/register/', {
+      await axios.post(`${API_URL}/auth/register/`, {
         username: formData.username,
         email: formData.email,
         password: formData.password,
