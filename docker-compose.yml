@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine          # лёгкая и актуальная версия
     container_name: conway_postgres
     restart: unless-stopped
     environment:
@@ -12,34 +12,32 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"        # если хочешь доступ снаружи (для dev)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - app_network
 
   backend:
     build: ./backend
     container_name: conway_backend
     restart: unless-stopped
     volumes:
-      - ./backend:/app
+      - ./backend:/app                  # для hot-reload в разработке
+      # - backend_data:/app             # раскомментировать только для production без hot-reload
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - DB_HOST=db  # Явно указываем хост
+      # Переменные ниже можно оставить в .env — они подтянутся автоматически
+      # DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT и т.д.
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy      # ждём, пока Postgres действительно готов
     env_file:
-      - .env
-    networks:
-      - app_network
+      - .env                            # подключаем твой .env файл
 
   frontend:
     build: ./frontend
@@ -49,13 +47,7 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-    networks:
-      - app_network
 
 volumes:
-  postgres_data:
+  postgres_data:                      # постоянное хранилище для PostgreSQL
     driver: local
-
-networks:
-  app_network:
-    driver: bridge
