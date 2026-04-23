@@ -20,7 +20,7 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - app_network  # ← Добавить сеть
+      - app_network
 
   backend:
     build: ./backend
@@ -32,14 +32,14 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - DB_HOST=db
+      - DB_HOST=db  # Явно указываем хост
     depends_on:
       db:
         condition: service_healthy
     env_file:
       - .env
     networks:
-      - app_network  # ← Добавить сеть
+      - app_network
 
   frontend:
     build: ./frontend
@@ -50,12 +50,12 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - app_network  # ← Добавить сеть
+      - app_network
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  app_network:  # ← Создать сеть
+  app_network:
     driver: bridge
