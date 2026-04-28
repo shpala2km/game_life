@@ -16,7 +16,11 @@ const ProfilePage: React.FC = () => {
     confirmNewPassword: '',
   });
 
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ 
+    type: 'success' | 'error'; 
+    text: string 
+  } | null>(null);
+
   const [loading, setLoading] = useState(false);
 
   const api = axios.create({ baseURL: API_URL });
@@ -26,6 +30,7 @@ const ProfilePage: React.FC = () => {
     return config;
   });
 
+  // Проверка авторизации
   useEffect(() => {
     if (!localStorage.getItem('access_token')) {
       navigate('/login');
@@ -37,6 +42,13 @@ const ProfilePage: React.FC = () => {
     setMessage(null);
   };
 
+  // Кастомное уведомление
+  const showNotification = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 5000);
+  };
+
+  // Обновление профиля (email + пароль)
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -49,7 +61,7 @@ const ProfilePage: React.FC = () => {
       if (formData.newPassword) updateData.new_password = formData.newPassword;
 
       if (Object.keys(updateData).length === 0) {
-        setMessage({ type: 'error', text: 'Ничего не изменено' });
+        showNotification('error', 'Ничего не изменено');
         setLoading(false);
         return;
       }
@@ -60,8 +72,9 @@ const ProfilePage: React.FC = () => {
         localStorage.setItem('user_email', formData.email);
       }
 
-      setMessage({ type: 'success', text: 'Профиль успешно обновлён!' });
+      showNotification('success', 'Профиль успешно обновлён!');
 
+      // Очищаем поля пароля после успешного обновления
       setFormData(prev => ({
         ...prev,
         newPassword: '',
@@ -69,10 +82,7 @@ const ProfilePage: React.FC = () => {
       }));
 
     } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.detail || 'Ошибка при обновлении профиля'
-      });
+      showNotification('error', err.response?.data?.detail || 'Ошибка при обновлении профиля');
     } finally {
       setLoading(false);
     }
@@ -86,6 +96,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="app">
       <Navbar />
+
       <div className="profile-container">
         <div className="profile-card">
           <h1>Профиль пользователя</h1>
@@ -94,7 +105,12 @@ const ProfilePage: React.FC = () => {
           <form onSubmit={handleUpdateProfile} className="profile-form">
             <div className="form-group">
               <label>Имя пользователя</label>
-              <input type="text" value={formData.username} disabled className="input-disabled" />
+              <input 
+                type="text" 
+                value={formData.username} 
+                disabled 
+                className="input-disabled" 
+              />
             </div>
 
             <div className="form-group">
@@ -130,11 +146,15 @@ const ProfilePage: React.FC = () => {
                 name="confirmNewPassword"
                 value={formData.confirmNewPassword}
                 onChange={handleChange}
-                placeholder="Повторите пароль"
+                placeholder="Повторите новый пароль"
               />
             </div>
 
-            {message && <div className={`message ${message.type}`}>{message.text}</div>}
+            {message && (
+              <div className={`message ${message.type}`}>
+                {message.text}
+              </div>
+            )}
 
             <button type="submit" className="save-btn" disabled={loading}>
               {loading ? 'Сохранение...' : 'Сохранить изменения'}

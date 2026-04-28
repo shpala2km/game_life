@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import '@/pages/homepage.css';
@@ -12,12 +11,7 @@ import Navbar from '@/modules/navbar';
 const API_URL = 'http://127.0.0.1:8000/api';
 
 function HomePage() {
-  // const navigate = useNavigate();
-
-  // const [currentUser, setCurrentUser] = useState<string | null>(
-  //   localStorage.getItem('username')
-  // );
-  const [isLoggedIn, /*setIsLoggedIn*/] = useState(!!localStorage.getItem('access_token'));
+  const [isLoggedIn] = useState(!!localStorage.getItem('access_token'));
 
   const sizes = [16, 8, 25, 36];
   const speeds = [1000, 200, 100, 50];
@@ -39,6 +33,12 @@ function HomePage() {
   const [userSaves, setUserSaves] = useState<any[]>([]);
   const [selectedSaveId, setSelectedSaveId] = useState<number | null>(null);
 
+  // Кастомные уведомления
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
+
   const engineRef = useRef<GameEngine | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
@@ -49,6 +49,20 @@ function HomePage() {
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
+
+  // Показ кастомного уведомления
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Кастомный confirm
+  const showConfirm = (message: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const result = window.confirm(message);
+      resolve(result);
+    });
+  };
 
   // Инициализация движка
   useEffect(() => {
@@ -103,62 +117,58 @@ function HomePage() {
     };
   }, [isRunning, speedIndex]);
 
-// ====================== СОХРАНЕНИЕ НА СЕРВЕР ======================
-const handleSaveToServer = async () => {
-  if (!engineRef.current) return;
-  if (!saveName.trim()) {
-    alert('Введите название сохранения');
-    return;
-  }
-
-  const nameToSave = saveName.trim();
-
-  // Проверяем, существует ли уже сохранение с таким именем
-  const existingSave = userSaves.find(save => 
-    save.name.toLowerCase() === nameToSave.toLowerCase()
-  );
-
-  if (existingSave) {
-    const confirmOverwrite = window.confirm(
-      `Сохранение с именем "${nameToSave}" уже существует.\n\nПерезаписать его?`
-    );
-
-    if (!confirmOverwrite) {
-      return; // пользователь отказался
+  // ====================== СОХРАНЕНИЕ НА СЕРВЕР ======================
+  const handleSaveToServer = async () => {
+    if (!engineRef.current) return;
+    if (!saveName.trim()) {
+      showNotification('error', 'Введите название сохранения');
+      return;
     }
 
-    // Перезаписываем существующее сохранение
+    const nameToSave = saveName.trim();
+
+    const existingSave = userSaves.find(save => 
+      save.name.toLowerCase() === nameToSave.toLowerCase()
+    );
+
+    if (existingSave) {
+      const confirmOverwrite = await showConfirm(
+        `Сохранение с именем "${nameToSave}" уже существует.\n\nПерезаписать его?`
+      );
+
+      if (!confirmOverwrite) return;
+
+      const data = {
+        ...engineRef.current.toJSON(),
+        name: nameToSave,
+      };
+
+      try {
+        await api.put(`/games/${existingSave.id}/`, data);
+        showNotification('success', 'Сохранение успешно перезаписано!');
+        setSaveName('');
+        loadUserSaves();
+      } catch (err: any) {
+        showNotification('error', 'Ошибка перезаписи: ' + (err.response?.data?.detail || err.message));
+      }
+      return;
+    }
+
+    // Создание нового сохранения
     const data = {
       ...engineRef.current.toJSON(),
       name: nameToSave,
     };
 
     try {
-      await api.put(`/games/${existingSave.id}/`, data);   // PUT для обновления
-      alert('✅ Сохранение успешно перезаписано!');
+      await api.post('/games/', data);
+      showNotification('success', 'Игра успешно сохранена на сервере!');
       setSaveName('');
       loadUserSaves();
     } catch (err: any) {
-      alert('Ошибка перезаписи: ' + (err.response?.data?.detail || err.message));
+      showNotification('error', 'Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
     }
-    return;
-  }
-
-  // Если сохранения с таким именем нет — создаём новое
-  const data = {
-    ...engineRef.current.toJSON(),
-    name: nameToSave,
   };
-
-  try {
-    await api.post('/games/', data);
-    alert('✅ Игра успешно сохранена на сервере!');
-    setSaveName('');
-    loadUserSaves();
-  } catch (err: any) {
-    alert('Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
-  }
-};
 
   const handleSaveToComputer = () => {
     if (!engineRef.current) return;
@@ -170,6 +180,7 @@ const handleSaveToServer = async () => {
     link.download = `game_of_life_${size}x${size}_gen${generation}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    showNotification('success', 'Файл сохранён на компьютер');
   };
 
   // ====================== ЗАГРУЗКА И УДАЛЕНИЕ ======================
@@ -187,18 +198,20 @@ const handleSaveToServer = async () => {
     setNeinghBirth(loadedRules.birth.join(','));
 
     setSelectedSaveId(save.id);
-    alert(`✅ Загружена: ${save.name}`);
+    showNotification('success', `Загружена игра: ${save.name}`);
   };
 
   const handleDeleteSave = async (id: number, name: string) => {
-    if (!window.confirm(`Удалить сохранение "${name}"?`)) return;
+    const confirmed = await showConfirm(`Удалить сохранение "${name}"?`);
+    if (!confirmed) return;
+
     try {
       await api.delete(`/games/${id}/`);
-      alert('Сохранение удалено');
+      showNotification('success', 'Сохранение успешно удалено');
       loadUserSaves();
       if (selectedSaveId === id) setSelectedSaveId(null);
     } catch (err: any) {
-      alert('Ошибка удаления: ' + (err.response?.data?.detail || err.message));
+      showNotification('error', 'Ошибка удаления: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -251,9 +264,9 @@ const handleSaveToServer = async () => {
       engineRef.current?.setRules({ birth, survival });
       setNeinghSurvive(survival.join('/'));
       setNeinghBirth(birth.join(','));
-      alert('Правила успешно применены!');
+      showNotification('success', 'Правила успешно применены!');
     } else {
-      alert('Введите корректные значения для правил');
+      showNotification('error', 'Введите корректные значения для правил');
     }
   };
 
@@ -289,6 +302,13 @@ const handleSaveToServer = async () => {
   return (
     <div className="app">
       <Navbar />
+
+      {/* Кастомное уведомление */}
+      {notification && (
+        <div className={`custom-notification ${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
 
       <div className="main-content">
         {/* Игровое поле */}
@@ -383,7 +403,7 @@ const handleSaveToServer = async () => {
             </div>
           )}
 
-          {/* Кастомные правила — возвращены */}
+          {/* Кастомные правила */}
           <div className="select-group">
             <div>
               <label>Размер поля</label>
@@ -401,7 +421,6 @@ const handleSaveToServer = async () => {
               </select>
             </div>
 
-            {/* Поля для изменения правил */}
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ color: '#a0b0d0', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
                 Свои правила (выживание / рождение)
