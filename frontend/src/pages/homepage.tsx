@@ -39,6 +39,13 @@ function HomePage() {
     message: string;
   } | null>(null);
 
+  // Состояние для кастомного подтверждения
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
+
   const engineRef = useRef<GameEngine | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
@@ -50,17 +57,26 @@ function HomePage() {
     return config;
   });
 
-  // Показ кастомного уведомления
+  // Показ обычного уведомления
   const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Кастомный confirm
+  // Кастомное подтверждение (вместо window.confirm)
   const showConfirm = (message: string): Promise<boolean> => {
     return new Promise((resolve) => {
-      const result = window.confirm(message);
-      resolve(result);
+      setConfirmDialog({
+        message,
+        onConfirm: () => {
+          setConfirmDialog(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setConfirmDialog(null);
+          resolve(false);
+        }
+      });
     });
   };
 
@@ -80,7 +96,6 @@ function HomePage() {
     setPopulation(pop);
   }, [grid]);
 
-  // Загрузка списка сохранений
   const loadUserSaves = async () => {
     if (!isLoggedIn) return;
     try {
@@ -132,12 +147,13 @@ function HomePage() {
     );
 
     if (existingSave) {
-      const confirmOverwrite = await showConfirm(
-        `Сохранение с именем "${nameToSave}" уже существует.\n\nПерезаписать его?`
+      const confirmed = await showConfirm(
+        `Сохранение с именем "${nameToSave}" уже существует.\n\nХотите перезаписать его?`
       );
 
-      if (!confirmOverwrite) return;
+      if (!confirmed) return;
 
+      // Перезапись
       const data = {
         ...engineRef.current.toJSON(),
         name: nameToSave,
@@ -215,7 +231,7 @@ function HomePage() {
     }
   };
 
-  // ====================== ОБРАБОТЧИКИ ======================
+  // ====================== Остальные обработчики ======================
   const handleStart = () => setIsRunning(true);
   const handleStop = () => setIsRunning(false);
 
@@ -307,6 +323,23 @@ function HomePage() {
       {notification && (
         <div className={`custom-notification ${notification.type}`}>
           {notification.message}
+        </div>
+      )}
+
+      {/* Кастомное окно подтверждения */}
+      {confirmDialog && (
+        <div className="confirm-dialog-overlay">
+          <div className="confirm-dialog">
+            <p>{confirmDialog.message}</p>
+            <div className="confirm-buttons">
+              <button onClick={confirmDialog.onCancel} className="cancel-btn">
+                Отмена
+              </button>
+              <button onClick={confirmDialog.onConfirm} className="confirm-btn">
+                Да, перезаписать
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -403,7 +436,7 @@ function HomePage() {
             </div>
           )}
 
-          {/* Кастомные правила */}
+          {/* Настройки и правила */}
           <div className="select-group">
             <div>
               <label>Размер поля</label>

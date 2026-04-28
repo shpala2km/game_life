@@ -420,3 +420,56 @@ html, body, #root {
   from { transform: translate(-50%, -20px); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
 }
+
+/* Кастомное окно подтверждения */
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog {
+  background: #13213d;
+  padding: 25px 30px;
+  border-radius: 10px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-dialog p {
+  margin-bottom: 20px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #445577;
+  color: white;
+}
+
+.confirm-btn {
+  background: #05a931;
+  color: white;
+}
