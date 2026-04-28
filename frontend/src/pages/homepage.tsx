@@ -103,38 +103,62 @@ function HomePage() {
     };
   }, [isRunning, speedIndex]);
 
-  // ====================== АВТОРИЗАЦИЯ ======================
-  // const handleLogout = () => {
-  //   localStorage.removeItem('access_token');
-  //   localStorage.removeItem('refresh_token');
-  //   localStorage.removeItem('username');
-  //   setCurrentUser(null);
-  //   setIsLoggedIn(false);
-  //   navigate('/login');
-  // };
+// ====================== СОХРАНЕНИЕ НА СЕРВЕР ======================
+const handleSaveToServer = async () => {
+  if (!engineRef.current) return;
+  if (!saveName.trim()) {
+    alert('Введите название сохранения');
+    return;
+  }
 
-  // ====================== СОХРАНЕНИЕ ======================
-  const handleSaveToServer = async () => {
-    if (!engineRef.current) return;
-    if (!saveName.trim()) {
-      alert('Введите название сохранения');
-      return;
+  const nameToSave = saveName.trim();
+
+  // Проверяем, существует ли уже сохранение с таким именем
+  const existingSave = userSaves.find(save => 
+    save.name.toLowerCase() === nameToSave.toLowerCase()
+  );
+
+  if (existingSave) {
+    const confirmOverwrite = window.confirm(
+      `Сохранение с именем "${nameToSave}" уже существует.\n\nПерезаписать его?`
+    );
+
+    if (!confirmOverwrite) {
+      return; // пользователь отказался
     }
 
+    // Перезаписываем существующее сохранение
     const data = {
       ...engineRef.current.toJSON(),
-      name: saveName.trim(),
+      name: nameToSave,
     };
 
     try {
-      await api.post('/games/', data);
-      alert('✅ Игра сохранена на сервере!');
+      await api.put(`/games/${existingSave.id}/`, data);   // PUT для обновления
+      alert('✅ Сохранение успешно перезаписано!');
       setSaveName('');
       loadUserSaves();
     } catch (err: any) {
-      alert('Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
+      alert('Ошибка перезаписи: ' + (err.response?.data?.detail || err.message));
     }
+    return;
+  }
+
+  // Если сохранения с таким именем нет — создаём новое
+  const data = {
+    ...engineRef.current.toJSON(),
+    name: nameToSave,
   };
+
+  try {
+    await api.post('/games/', data);
+    alert('✅ Игра успешно сохранена на сервере!');
+    setSaveName('');
+    loadUserSaves();
+  } catch (err: any) {
+    alert('Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
+  }
+};
 
   const handleSaveToComputer = () => {
     if (!engineRef.current) return;
