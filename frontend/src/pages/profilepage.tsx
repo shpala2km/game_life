@@ -18,6 +18,7 @@ const ProfilePage: React.FC = () => {
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const api = axios.create({ baseURL: API_URL });
   api.interceptors.request.use((config) => {
@@ -37,6 +38,7 @@ const ProfilePage: React.FC = () => {
     setMessage(null);
   };
 
+  // Обновление профиля (email + пароль)
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -78,6 +80,44 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // УДАЛЕНИЕ АККАУНТА
+  const handleDeleteAccount = async () => {
+    const confirm1 = window.confirm(
+      "ВЫ УВЕРЕНЫ? Это действие НЕОБРАТИМО.\n\nВсе ваши сохранённые игры будут удалены."
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.prompt(
+      'Для подтверждения удаления аккаунта введите слово "УДАЛИТЬ":'
+    );
+
+    if (confirm2 !== 'УДАЛИТЬ') {
+      alert('Неверное слово. Удаление отменено.');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setMessage(null);
+
+    try {
+      await api.delete('/auth/profile/delete/');
+
+      alert('Ваш аккаунт был успешно удалён.');
+
+      // Очищаем всё и перенаправляем на главную
+      localStorage.clear();
+      navigate('/');
+
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.detail || 'Не удалось удалить аккаунт'
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
@@ -86,6 +126,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="app">
       <Navbar />
+
       <div className="profile-container">
         <div className="profile-card">
           <h1>Профиль пользователя</h1>
@@ -130,7 +171,7 @@ const ProfilePage: React.FC = () => {
                 name="confirmNewPassword"
                 value={formData.confirmNewPassword}
                 onChange={handleChange}
-                placeholder="Повторите пароль"
+                placeholder="Повторите новый пароль"
               />
             </div>
 
@@ -140,6 +181,22 @@ const ProfilePage: React.FC = () => {
               {loading ? 'Сохранение...' : 'Сохранить изменения'}
             </button>
           </form>
+
+          {/* Кнопка удаления аккаунта */}
+          <div className="delete-account-section">
+            <hr className="divider" />
+            <h3 style={{ color: '#ff6b6b' }}>Опасная зона</h3>
+            <p style={{ color: '#ff6b6b', fontSize: '14px' }}>
+              Удаление аккаунта удалит все ваши сохранённые игры и данные без возможности восстановления.
+            </p>
+            <button
+              onClick={handleDeleteAccount}
+              className="delete-account-btn"
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Удаление...' : '🗑 Удалить аккаунт'}
+            </button>
+          </div>
 
           <div className="profile-actions">
             <button onClick={handleLogout} className="logout-btn-full">
