@@ -33,6 +33,12 @@ function HomePage() {
   const [userSaves, setUserSaves] = useState<any[]>([]);
   const [selectedSaveId, setSelectedSaveId] = useState<number | null>(null);
 
+  // Кастомные уведомления
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
+
   const engineRef = useRef<GameEngine | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
@@ -43,6 +49,11 @@ function HomePage() {
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
 
   // Инициализация движка
   useEffect(() => {
@@ -96,11 +107,11 @@ function HomePage() {
     };
   }, [isRunning, speedIndex]);
 
-  // ====================== СОХРАНЕНИЕ ======================
+  // ====================== СОХРАНЕНИЕ НА СЕРВЕР ======================
   const handleSaveToServer = async () => {
     if (!engineRef.current) return;
     if (!saveName.trim()) {
-      alert('Введите название сохранения');
+      showNotification('error', 'Введите название сохранения');
       return;
     }
 
@@ -126,15 +137,15 @@ function HomePage() {
     try {
       if (existingSave) {
         await api.put(`/games/${existingSave.id}/`, data);
-        alert('✅ Сохранение успешно перезаписано!');
+        showNotification('success', 'Сохранение успешно перезаписано!');
       } else {
         await api.post('/games/', data);
-        alert('✅ Игра успешно сохранена на сервере!');
+        showNotification('success', 'Игра успешно сохранена на сервере!');
       }
       setSaveName('');
       loadUserSaves();
     } catch (err: any) {
-      alert('Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
+      showNotification('error', 'Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -148,6 +159,7 @@ function HomePage() {
     link.download = `game_of_life_${size}x${size}_gen${generation}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    showNotification('success', 'Файл сохранён на компьютер');
   };
 
   // ====================== ЗАГРУЗКА С КОМПЬЮТЕРА ======================
@@ -176,9 +188,9 @@ function HomePage() {
           setNeinghSurvive(loadedRules.survival.join('/'));
           setNeinghBirth(loadedRules.birth.join(','));
 
-          alert(`✅ Загружено из файла! Поле ${engineRef.current.getSize()}×${engineRef.current.getSize()}, поколение ${engineRef.current.getGeneration()}`);
+          showNotification('success', `Загружено из файла! Поле ${engineRef.current.getSize()}×${engineRef.current.getSize()}`);
         } catch (err) {
-          alert('Ошибка при чтении JSON файла');
+          showNotification('error', 'Ошибка при чтении JSON файла');
         }
       };
       reader.readAsText(file);
@@ -201,18 +213,18 @@ function HomePage() {
     setNeinghBirth(loadedRules.birth.join(','));
 
     setSelectedSaveId(save.id);
-    alert(`✅ Загружена игра: ${save.name}`);
+    showNotification('success', `Загружена игра: ${save.name}`);
   };
 
   const handleDeleteSave = async (id: number, name: string) => {
     if (!window.confirm(`Удалить сохранение "${name}"?`)) return;
     try {
       await api.delete(`/games/${id}/`);
-      alert('Сохранение удалено');
+      showNotification('success', 'Сохранение удалено');
       loadUserSaves();
       if (selectedSaveId === id) setSelectedSaveId(null);
     } catch (err: any) {
-      alert('Ошибка удаления: ' + (err.response?.data?.detail || err.message));
+      showNotification('error', 'Ошибка удаления');
     }
   };
 
@@ -265,9 +277,9 @@ function HomePage() {
       engineRef.current?.setRules({ birth, survival });
       setNeinghSurvive(survival.join('/'));
       setNeinghBirth(birth.join(','));
-      alert('Правила успешно применены!');
+      showNotification('success', 'Правила успешно применены!');
     } else {
-      alert('Введите корректные значения для правил');
+      showNotification('error', 'Введите корректные значения для правил');
     }
   };
 
@@ -303,6 +315,13 @@ function HomePage() {
   return (
     <div className="app">
       <Navbar />
+
+      {/* Кастомное уведомление */}
+      {notification && (
+        <div className={`custom-notification ${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
 
       <div className="main-content">
         {/* Игровое поле */}
@@ -340,7 +359,7 @@ function HomePage() {
             <button onClick={handleClear}>Очистить</button>
           </div>
 
-          {/* Сохранение и загрузка */}
+          {/* Блок сохранения и загрузки */}
           {isLoggedIn && (
             <div className="save-section">
               <input
@@ -350,7 +369,7 @@ function HomePage() {
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
               />
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <button onClick={handleSaveToServer} style={{ flex: 1, background: '#05a931' }}>
                   💾 Сохранить на сервер
                 </button>
@@ -358,13 +377,13 @@ function HomePage() {
                   💻 Сохранить на компьютер
                 </button>
               </div>
-              <button onClick={handleLoadFromComputer} className="load-btn">
-                📂 Загрузить с компьютера
+              <button onClick={handleLoadFromComputer} className="load-btn" style={{ width: '100%' }}>
+                📂 Загрузить с компьютера (JSON)
               </button>
             </div>
           )}
 
-          {/* Мои сохранения с сервера */}
+          {/* Мои сохранения */}
           {isLoggedIn && (
             <div className="save-section" style={{ marginTop: '15px' }}>
               <label style={{ color: '#a0b0d0', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
@@ -464,9 +483,6 @@ function HomePage() {
                   Применить
                 </button>
               </div>
-              <small style={{ color: '#8899aa' }}>
-                Выживание (через запятую), Рождение
-              </small>
             </div>
           </div>
 
