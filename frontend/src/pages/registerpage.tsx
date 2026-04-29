@@ -5,7 +5,7 @@ import '@/pages/registerpage.css';
 import Navbar from '@/modules/navbar';
 
 
-const API_URL = 'http://81.26.187.199/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({

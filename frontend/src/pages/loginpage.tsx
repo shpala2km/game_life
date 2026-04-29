@@ -5,7 +5,7 @@ import '@/pages/loginpage.css';
 import Navbar from '@/modules/navbar';
 
 
-const API_URL = 'http://81.26.187.199/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });

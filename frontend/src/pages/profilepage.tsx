@@ -4,7 +4,7 @@ import axios from 'axios';
 import Navbar from '@/modules/navbar';
 import '@/pages/profilepage.css';
 
-const API_URL = 'http://81.26.187.199/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();

@@ -8,7 +8,7 @@ import { getCellClass } from '@/modules/cellAppearance';
 import Rules from '@/modules/rules';
 import Navbar from '@/modules/navbar';
 
-const API_URL = 'http://81.26.187.199/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 function HomePage() {
   const [isLoggedIn] = useState(!!localStorage.getItem('access_token'));
