@@ -33,19 +33,6 @@ function HomePage() {
   const [userSaves, setUserSaves] = useState<any[]>([]);
   const [selectedSaveId, setSelectedSaveId] = useState<number | null>(null);
 
-  // Кастомные уведомления
-  const [notification, setNotification] = useState<{
-    type: 'success' | 'error' | 'info';
-    message: string;
-  } | null>(null);
-
-  // Состояние для кастомного подтверждения
-  const [confirmDialog, setConfirmDialog] = useState<{
-    message: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-  } | null>(null);
-
   const engineRef = useRef<GameEngine | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const FIELD_SIZE = 500;
@@ -56,29 +43,6 @@ function HomePage() {
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
-
-  // Показ обычного уведомления
-  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 4000);
-  };
-
-  // Кастомное подтверждение (вместо window.confirm)
-  const showConfirm = (message: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setConfirmDialog({
-        message,
-        onConfirm: () => {
-          setConfirmDialog(null);
-          resolve(true);
-        },
-        onCancel: () => {
-          setConfirmDialog(null);
-          resolve(false);
-        }
-      });
-    });
-  };
 
   // Инициализация движка
   useEffect(() => {
@@ -132,11 +96,11 @@ function HomePage() {
     };
   }, [isRunning, speedIndex]);
 
-  // ====================== СОХРАНЕНИЕ НА СЕРВЕР ======================
+  // ====================== СОХРАНЕНИЕ ======================
   const handleSaveToServer = async () => {
     if (!engineRef.current) return;
     if (!saveName.trim()) {
-      showNotification('error', 'Введите название сохранения');
+      alert('Введите название сохранения');
       return;
     }
 
@@ -147,42 +111,30 @@ function HomePage() {
     );
 
     if (existingSave) {
-      const confirmed = await showConfirm(
-        `Сохранение с именем "${nameToSave}" уже существует.\n\nХотите перезаписать его?`
+      const confirmOverwrite = window.confirm(
+        `Сохранение с именем "${nameToSave}" уже существует.\n\nПерезаписать его?`
       );
 
-      if (!confirmed) return;
-
-      // Перезапись
-      const data = {
-        ...engineRef.current.toJSON(),
-        name: nameToSave,
-      };
-
-      try {
-        await api.put(`/games/${existingSave.id}/`, data);
-        showNotification('success', 'Сохранение успешно перезаписано!');
-        setSaveName('');
-        loadUserSaves();
-      } catch (err: any) {
-        showNotification('error', 'Ошибка перезаписи: ' + (err.response?.data?.detail || err.message));
-      }
-      return;
+      if (!confirmOverwrite) return;
     }
 
-    // Создание нового сохранения
     const data = {
       ...engineRef.current.toJSON(),
       name: nameToSave,
     };
 
     try {
-      await api.post('/games/', data);
-      showNotification('success', 'Игра успешно сохранена на сервере!');
+      if (existingSave) {
+        await api.put(`/games/${existingSave.id}/`, data);
+        alert('✅ Сохранение успешно перезаписано!');
+      } else {
+        await api.post('/games/', data);
+        alert('✅ Игра успешно сохранена на сервере!');
+      }
       setSaveName('');
       loadUserSaves();
     } catch (err: any) {
-      showNotification('error', 'Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
+      alert('Ошибка сохранения: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -196,10 +148,45 @@ function HomePage() {
     link.download = `game_of_life_${size}x${size}_gen${generation}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    showNotification('success', 'Файл сохранён на компьютер');
   };
 
-  // ====================== ЗАГРУЗКА И УДАЛЕНИЕ ======================
+  // ====================== ЗАГРУЗКА С КОМПЬЮТЕРА ======================
+  const handleLoadFromComputer = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const raw = JSON.parse(event.target?.result as string);
+          if (!engineRef.current) return;
+
+          engineRef.current.loadFromJSON(raw);
+
+          setSize(engineRef.current.getSize());
+          setGrid(engineRef.current.getGrid());
+          setGeneration(engineRef.current.getGeneration());
+          setIsRunning(false);
+
+          const loadedRules = engineRef.current.getRules();
+          setNeinghSurvive(loadedRules.survival.join('/'));
+          setNeinghBirth(loadedRules.birth.join(','));
+
+          alert(`✅ Загружено из файла! Поле ${engineRef.current.getSize()}×${engineRef.current.getSize()}, поколение ${engineRef.current.getGeneration()}`);
+        } catch (err) {
+          alert('Ошибка при чтении JSON файла');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  // ====================== ЗАГРУЗКА И УДАЛЕНИЕ С СЕРВЕРА ======================
   const handleLoadGame = (save: any) => {
     if (!engineRef.current) return;
     engineRef.current.loadFromJSON(save);
@@ -214,24 +201,22 @@ function HomePage() {
     setNeinghBirth(loadedRules.birth.join(','));
 
     setSelectedSaveId(save.id);
-    showNotification('success', `Загружена игра: ${save.name}`);
+    alert(`✅ Загружена игра: ${save.name}`);
   };
 
   const handleDeleteSave = async (id: number, name: string) => {
-    const confirmed = await showConfirm(`Удалить сохранение "${name}"?`);
-    if (!confirmed) return;
-
+    if (!window.confirm(`Удалить сохранение "${name}"?`)) return;
     try {
       await api.delete(`/games/${id}/`);
-      showNotification('success', 'Сохранение успешно удалено');
+      alert('Сохранение удалено');
       loadUserSaves();
       if (selectedSaveId === id) setSelectedSaveId(null);
     } catch (err: any) {
-      showNotification('error', 'Ошибка удаления: ' + (err.response?.data?.detail || err.message));
+      alert('Ошибка удаления: ' + (err.response?.data?.detail || err.message));
     }
   };
 
-  // ====================== Остальные обработчики ======================
+  // ====================== ОБРАБОТЧИКИ ======================
   const handleStart = () => setIsRunning(true);
   const handleStop = () => setIsRunning(false);
 
@@ -280,9 +265,9 @@ function HomePage() {
       engineRef.current?.setRules({ birth, survival });
       setNeinghSurvive(survival.join('/'));
       setNeinghBirth(birth.join(','));
-      showNotification('success', 'Правила успешно применены!');
+      alert('Правила успешно применены!');
     } else {
-      showNotification('error', 'Введите корректные значения для правил');
+      alert('Введите корректные значения для правил');
     }
   };
 
@@ -318,30 +303,6 @@ function HomePage() {
   return (
     <div className="app">
       <Navbar />
-
-      {/* Кастомное уведомление */}
-      {notification && (
-        <div className={`custom-notification ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
-
-      {/* Кастомное окно подтверждения */}
-      {confirmDialog && (
-        <div className="confirm-dialog-overlay">
-          <div className="confirm-dialog">
-            <p>{confirmDialog.message}</p>
-            <div className="confirm-buttons">
-              <button onClick={confirmDialog.onCancel} className="cancel-btn">
-                Отмена
-              </button>
-              <button onClick={confirmDialog.onConfirm} className="confirm-btn">
-                Да, перезаписать
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="main-content">
         {/* Игровое поле */}
@@ -379,7 +340,7 @@ function HomePage() {
             <button onClick={handleClear}>Очистить</button>
           </div>
 
-          {/* Сохранение */}
+          {/* Сохранение и загрузка */}
           {isLoggedIn && (
             <div className="save-section">
               <input
@@ -389,7 +350,7 @@ function HomePage() {
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
               />
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <button onClick={handleSaveToServer} style={{ flex: 1, background: '#05a931' }}>
                   💾 Сохранить на сервер
                 </button>
@@ -397,10 +358,13 @@ function HomePage() {
                   💻 Сохранить на компьютер
                 </button>
               </div>
+              <button onClick={handleLoadFromComputer} className="load-btn">
+                📂 Загрузить с компьютера
+              </button>
             </div>
           )}
 
-          {/* Мои сохранения */}
+          {/* Мои сохранения с сервера */}
           {isLoggedIn && (
             <div className="save-section" style={{ marginTop: '15px' }}>
               <label style={{ color: '#a0b0d0', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
@@ -506,7 +470,6 @@ function HomePage() {
             </div>
           </div>
 
-          {/* Шаблоны */}
           <div className="button-group">
             <label style={{ color: '#a0b0d0', fontWeight: '600' }}>Шаблоны:</label>
             {Object.keys(SHAPE_TEMPLATES).map((key) => (
