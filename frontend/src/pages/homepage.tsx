@@ -432,10 +432,10 @@ const handleLoadFromComputer = () => {
                 <button onClick={handleSaveToComputer} style={{ flex: 1 }}>
                   💻 Сохранить на компьютер
                 </button>
+              </div>
                 <button onClick={handleLoadFromComputer} className="load-btn" style={{ width: '100%', marginTop: '8px' }}>
                   📂 Загрузить с компьютера (JSON)
                 </button>
-              </div>
             </div>
           )}
 
